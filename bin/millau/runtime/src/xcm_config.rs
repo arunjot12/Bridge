@@ -34,6 +34,7 @@ use frame_support::{
 	traits::{ConstU32, Everything, Nothing},
 	weights::Weight,
 };
+use xcm_builder::NativeAsset;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowTopLevelPaidExecutionFrom,
@@ -94,6 +95,25 @@ type LocalOriginConverter = (
 );
 
 parameter_types! {
+	pub const Roc: MultiAssetFilter = Wild(AllOf { fun: WildFungible, id: Concrete(TokenLocation::get()) });
+	//pub const Rialto: MultiLocation = GlobalConsensus(ByGenesis([0xf2;0xf7;0xf0;0x28;0xa7;0x59;0xe2;0xe3;0xb9;08dc38fedd28979b006da63e4cf6d923b29cd90e61206a7; 32])).into_location();
+	//pub const Millau: MultiLocation = GlobalConsensus(ByGenesis([u8; 32])).into_location();
+	 pub const Rialto: MultiLocation = PalletInstance(100).into_location();
+	 pub const Millau: MultiLocation = PalletInstance(200).into_location();
+	pub const OurMillau: (MultiAssetFilter, MultiLocation) = (Roc::get(), Millau::get());
+	pub const OurRialto: (MultiAssetFilter, MultiLocation) = (Roc::get(), Rialto::get());
+
+}
+
+
+pub type TrustedTeleporters = (
+	
+	xcm_builder::Case<OurMillau>,
+	xcm_builder::Case<OurRialto>,
+	NativeAsset
+);
+
+parameter_types! {
 	/// The amount of weight an XCM operation takes. This is a safe overestimate.
 	pub const BaseXcmWeight: Weight = Weight::from_parts(1_000_000_000, 64 * 1024);
 	/// Maximum number of instructions in a single XCM fragment. A sanity check against weight
@@ -130,7 +150,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
 	type IsReserve = ();
-	type IsTeleporter = ();
+	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = XcmWeigher;
@@ -209,7 +229,7 @@ impl XcmBridge for ToRialtoBridge {
 	}
 
 	fn verify_destination(dest: &MultiLocation) -> bool {
-		matches!(*dest, MultiLocation { parents: 1, interior: X1(GlobalConsensus(r)) } if r == RialtoNetwork::get())
+		matches!(*dest, MultiLocation { parents: 1, interior: X1(PalletInstance(100)) })
 	}
 
 	fn build_destination() -> MultiLocation {
